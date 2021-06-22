@@ -5,7 +5,7 @@ import numpy as np
 
 import sys
 
-from utils.common import DEBUG, CAN_DISPLAY, log
+from utils.common import DEBUG, CAN_DISPLAY, log, angle_between
 from utils.cv2_common import get_camera, register_params, place_text
 from utils.image import scale_image, get_transformed_point, \
     four_point_transform, get_contours
@@ -79,15 +79,17 @@ while True:
             # PIXEL -> MM Calculation
             ###
 
-            pixels_to_distance = []
+            pixels_to_distance = {
+                "vertical": [],
+                "horizontal": []
+            }
 
-            (width, height, _) = img.shape
-
-            pixels_to_distance.append(
+            (height, width, _) = img.shape
+            pixels_to_distance["horizontal"].append(
                 width / HORIZONTAL
             )
 
-            pixels_to_distance.append(
+            pixels_to_distance["vertical"].append(
                 height / VERTICAL
             )
 
@@ -107,18 +109,29 @@ while True:
                     pt1 = get_transformed_point(pt1, M)
                     pt2 = get_transformed_point(pt2, M)
 
+                    line_width = abs(pt1[0] - pt2[0])
+                    line_height = abs(pt1[1] - pt2[1])
+
                     length = (
-                                     (pt1[0] - pt2[0]) ** 2 +
-                                     (pt1[1] - pt2[1]) ** 2
-                             ) ** 0.5
+                                     line_width ** 2 +
+                                     line_height ** 2
+                     ) ** 0.5
 
-                    pixels_to_distance.append(
-                        length / MARKER_SIZE
-                    )
+                    ang = np.arctan(line_height / (line_width + 1e-25))
 
-            average_pixel_distance = np.average(pixels_to_distance)
+                    pixel_mm_ratio = length / MARKER_SIZE
 
-            log(f"Average pixels per mm = {average_pixel_distance}")
+                    if np.rad2deg(ang) % 180 < 20:
+                        pixels_to_distance['horizontal'].append(pixel_mm_ratio)
+                    else:
+                        pixels_to_distance['vertical'].append(pixel_mm_ratio)
+
+
+            average_horizontal_ratio = np.average(pixels_to_distance["horizontal"])
+            average_vertical_ratio = np.average(pixels_to_distance["vertical"])
+
+            # print(f"Horizontal: {pixels_to_distance['horizontal']}\n{average_horizontal_ratio}")
+            # print(f"Vertical: {pixels_to_distance['vertical']}\n{average_vertical_ratio}")
 
             ###
             # Image analysis
@@ -140,16 +153,15 @@ while True:
 
                     cv2.line(img, pt1, pt2, (100, 0, 255), 2)
 
-                    line_length = ((abs(pt2[0] - pt1[0]) ** 2) +
-                                   (abs(pt2[1] - pt1[1])) ** 2) ** 0.5
+                    line_width = abs(pt1[0] - pt2[0])
+                    line_height = abs(pt1[1] - pt2[1])
 
-                    real_distance = round(
-                        line_length / average_pixel_distance, 1)
+                    line_width = line_width / average_horizontal_ratio
 
-                    log(f"line with pixel distance of {line_length} "
-                              f"using average of "
-                              f"{average_pixel_distance} has "
-                              f"real value of {real_distance}")
+                    line_height = line_height / average_vertical_ratio
+
+                    real_distance = round((line_width ** 2 +
+                                     line_height ** 2) ** 0.5, 1)
 
                     place_text(
                         img, text=f"{real_distance}mm",

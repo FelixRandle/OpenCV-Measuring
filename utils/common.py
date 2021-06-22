@@ -2,7 +2,6 @@
 Utility functions to clean up main file.
 """
 import sys
-import cv2
 import numpy as np
 
 # Set debug if intelliJ debugger attached
@@ -23,6 +22,12 @@ def distance(pt1, pt2):
     ) ** 0.5
 
     return length
+
+
+def angle_between(pt1, pt2):
+    ang1 = np.arctan2(*pt1[::-1])
+    ang2 = np.arctan2(*pt2[::-1])
+    return np.rad2deg((ang1 - ang2) % (2 * np.pi))
 
 
 def log(text):
