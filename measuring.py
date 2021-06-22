@@ -29,6 +29,7 @@ register_params({
 })
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
+aruco_params = aruco.DetectorParameters_create()
 
 while True:
     return_value, img = camera.read()
@@ -42,7 +43,7 @@ while True:
 
     if img is not None:
         (corners, ids, rejected) = aruco.detectMarkers(
-            img, aruco_dict, parameters=aruco.DetectorParameters_create())
+            img, aruco_dict, parameters=aruco_params)
 
         blank_img = img.copy()
 
