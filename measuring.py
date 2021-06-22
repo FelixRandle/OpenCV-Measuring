@@ -45,8 +45,6 @@ while True:
         (corners, ids, rejected) = aruco.detectMarkers(
             img, aruco_dict, parameters=aruco_params)
 
-        blank_img = img.copy()
-
         if len(corners) < 4:
             log("Cannot see enough markers to do anything useful.")
             cv2.imshow("Image", img)
@@ -72,13 +70,9 @@ while True:
                 log(f"Found marker ID: #{ids[i][0]} "
                           f"with top left at position #{pt2}")
 
-            if any(value is None for value in corner_positions.items()):
-                print(corners)
-                print(corner_positions)
-
             # Transform our image to get a birds eye view.
             img, M = four_point_transform(
-                blank_img,
+                img,
                 np.array(list(corner_positions.values()), np.float32))
 
             ###
@@ -122,33 +116,6 @@ while True:
                         length / MARKER_SIZE
                     )
 
-            # for key, value in corner_positions.items():
-            #     # Translate our corner positions to the new, translated image
-            #     print(f"Original: {value}")
-            #     value = get_transformed_point(value, M)
-            #     corner_positions[key] = value
-            #     print(f"Translated: {value}")
-            #
-            #
-            #     # Calculate pixel to mm ratio from our markers
-            #     # TODO: take the size of our markers into account
-            #     # when calculating this.
-            #
-            #     pt1 = value
-            #     for i in range(key + 1, 4):
-            #         pt2 = corner_positions[i]
-            #         if pt2 is not None:
-            #             expected_distance = KNOWN_DISTANCES[key][i].value
-            #
-            #             length = utils.distance(pt1, pt2)
-            #
-            #             log(f"Line with pixel length {length} "
-            #                       f"and expected length {expected_distance} "
-            #                       f"from {key} to {i} has pixel->mm of "
-            #                       f"{length / expected_distance}")
-
-
-
             average_pixel_distance = np.average(pixels_to_distance)
 
             log(f"Average pixels per mm = {average_pixel_distance}")
@@ -160,7 +127,6 @@ while True:
             contours, \
             (grey, blurred, edged, eroded, dilated) = get_contours(img)
 
-            # TODO: Optimise this more, quite laggy.
             for cnt in contours:
                 perimeter = cv2.arcLength(cnt, True)
 
