@@ -20,15 +20,16 @@ if camera is None:
 
 # Register params with format
 # "NAME": [DEFAULT, MAX, FLOAT?]
-register_params({
-    "gaussian__ksize": [3, 20],
-    "gaussian__sigmax": [150, 200],
-    "canny__threshold1": [130, 255],
-    "canny__threshold2": [40, 255],
-    "erosion__kernel_size": [1, 20],
-    "dilation__kernel_size": [3, 20],
-    "border__epsilon": [2, 100]
-})
+if CAN_DISPLAY:
+    register_params({
+        "gaussian__ksize": [3, 20],
+        "gaussian__sigmax": [150, 200],
+        "canny__threshold1": [130, 255],
+        "canny__threshold2": [40, 255],
+        "erosion__kernel_size": [1, 20],
+        "dilation__kernel_size": [3, 20],
+        "border__epsilon": [2, 100]
+    })
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
 aruco_params = aruco.DetectorParameters_create()
@@ -49,10 +50,12 @@ while True:
 
         if len(corners) < 4:
             log("Cannot see enough markers to do anything useful.")
-            cv2.imshow("Image", img)
+            if CAN_DISPLAY:
+                cv2.imshow("Image", img)
         elif len(corners) > 4:
             log("Too many markers in frame")
-            cv2.imshow("Image", img)
+            if CAN_DISPLAY:
+                cv2.imshow("Image", img)
         else:
             for i in range(0, len(corners)):
                 detected_marker = corners[i]
@@ -175,6 +178,7 @@ while True:
                         scale=0.5)
 
             if CAN_DISPLAY:
+                print(f"display: {CAN_DISPLAY}")
                 if DEBUG:
                     row1 = np.hstack((
                         scale_image(img),

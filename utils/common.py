@@ -1,6 +1,7 @@
 """
 Utility functions to clean up main file.
 """
+import argparse
 import sys
 import numpy as np
 
@@ -12,7 +13,14 @@ if sys.gettrace() is not None:
 IS_WINDOWS = sys.platform == "win32"
 
 # Can probably find a nicer way to see if there's a window to display on.
-CAN_DISPLAY = IS_WINDOWS
+parser = argparse.ArgumentParser(description='Process Arguments')
+parser.add_argument('-c', '--console',
+                    help='Output to console instead of screen',
+                    action='store_true')
+
+args = parser.parse_args()
+
+CAN_DISPLAY = not args.console
 
 
 def distance(pt1, pt2):
