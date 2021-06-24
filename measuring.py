@@ -52,7 +52,8 @@ while True:
             log("Cannot see enough markers to do anything useful.")
             cv2.imshow("Image", img)
         elif len(corners) > 4:
-            print("Too many markers in frame")
+            log("Too many markers in frame")
+            cv2.imshow("Image", img)
         else:
             for i in range(0, len(corners)):
                 detected_marker = corners[i]
