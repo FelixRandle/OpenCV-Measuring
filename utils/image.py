@@ -43,7 +43,7 @@ def get_contours(image):
     dilated = cv2.dilate(eroded, kernel, iterations=1)
 
     (_, cnts, _) = cv2.findContours(dilated, cv2.RETR_EXTERNAL,
-                                    cv2.CHAIN_APPROX_NONE)
+                                    cv2.CHAIN_APPROX_SIMPLE)
 
     return cnts, (gray, blurred, edged, eroded, dilated)
 

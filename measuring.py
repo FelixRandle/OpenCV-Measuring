@@ -3,10 +3,12 @@ import cv2.aruco as aruco
 
 import numpy as np
 
+import argparse
 import sys
 
 from utils.common import DEBUG, CAN_DISPLAY, log, angle_between
-from utils.cv2_common import get_camera, register_params, place_text
+from utils.cv2_common import get_camera, register_params, place_text,\
+    get_param_value
 from utils.image import scale_image, get_transformed_point, \
     four_point_transform, get_contours
 
@@ -25,7 +27,8 @@ register_params({
     "canny__threshold1": [130, 255],
     "canny__threshold2": [40, 255],
     "erosion__kernel_size": [1, 20],
-    "dilation__kernel_size": [3, 20]
+    "dilation__kernel_size": [3, 20],
+    "border__epsilon": [2, 100]
 })
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
@@ -68,7 +71,7 @@ while True:
                 corner_positions[ids[i][0]] = pt2
 
                 log(f"Found marker ID: #{ids[i][0]} "
-                          f"with top left at position #{pt2}")
+                    f"with top left at position #{pt2}")
 
             # Transform our image to get a birds eye view.
             img, M = four_point_transform(
@@ -115,35 +118,42 @@ while True:
                     length = (
                                      line_width ** 2 +
                                      line_height ** 2
-                     ) ** 0.5
+                             ) ** 0.5
 
                     ang = np.arctan(line_height / (line_width + 1e-25))
 
                     pixel_mm_ratio = length / MARKER_SIZE
 
-                    if np.rad2deg(ang) % 180 < 20:
-                        pixels_to_distance['horizontal'].append(pixel_mm_ratio)
-                    else:
-                        pixels_to_distance['vertical'].append(pixel_mm_ratio)
+                    if line_height != 0:
+                        pixels_to_distance['vertical'].append(
+                            line_height / (np.sin(ang) * MARKER_SIZE))
 
+                    if line_width != 0:
+                        pixels_to_distance['horizontal'].append(
+                            line_width / (np.cos(ang) * MARKER_SIZE))
 
-            average_horizontal_ratio = np.average(pixels_to_distance["horizontal"])
+                    # if np.rad2deg(ang) % 180 < 20:
+                    #     pixels_to_distance['horizontal'].append(
+                    #     pixel_mm_ratio)
+                    # else:
+                    #     pixels_to_distance['vertical'].append(pixel_mm_ratio)
+
+            average_horizontal_ratio = np.average(
+                pixels_to_distance["horizontal"])
             average_vertical_ratio = np.average(pixels_to_distance["vertical"])
-
-            # print(f"Horizontal: {pixels_to_distance['horizontal']}\n{average_horizontal_ratio}")
-            # print(f"Vertical: {pixels_to_distance['vertical']}\n{average_vertical_ratio}")
 
             ###
             # Image analysis
             ###
 
-            contours, \
-            (grey, blurred, edged, eroded, dilated) = get_contours(img)
+            contours, (grey, blurred,
+                       edged, eroded, dilated) = get_contours(img)
 
+            epsilon_multiplier = get_param_value("border__epsilon", 2) / 100
             for cnt in contours:
                 perimeter = cv2.arcLength(cnt, True)
 
-                epsilon = 0.02 * perimeter
+                epsilon = epsilon_multiplier * perimeter
                 approx = cv2.approxPolyDP(cnt, epsilon, True)
 
                 for i in range(0, len(approx)):
@@ -161,7 +171,7 @@ while True:
                     line_height = line_height / average_vertical_ratio
 
                     real_distance = round((line_width ** 2 +
-                                     line_height ** 2) ** 0.5, 1)
+                                           line_height ** 2) ** 0.5, 1)
 
                     place_text(
                         img, text=f"{real_distance}mm",

@@ -29,12 +29,10 @@ def get_param_value(key, default):
 
 
 def get_camera(camera_id):
-    camera = cv2.VideoCapture(camera_id)
-
+    camera = cv2.VideoCapture(camera_id, cv2.CAP_DSHOW)
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     camera.set(cv2.CAP_PROP_FPS, 60)
-
     if camera is None or not camera.isOpened():
         return False
     else:
