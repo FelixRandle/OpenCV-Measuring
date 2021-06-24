@@ -3,7 +3,6 @@ import cv2.aruco as aruco
 
 import numpy as np
 
-import argparse
 import sys
 
 from utils.common import DEBUG, CAN_DISPLAY, log, angle_between
@@ -133,15 +132,10 @@ while True:
                         pixels_to_distance['horizontal'].append(
                             line_width / (np.cos(ang) * MARKER_SIZE))
 
-                    # if np.rad2deg(ang) % 180 < 20:
-                    #     pixels_to_distance['horizontal'].append(
-                    #     pixel_mm_ratio)
-                    # else:
-                    #     pixels_to_distance['vertical'].append(pixel_mm_ratio)
-
             average_horizontal_ratio = np.average(
                 pixels_to_distance["horizontal"])
-            average_vertical_ratio = np.average(pixels_to_distance["vertical"])
+            average_vertical_ratio = np.average(
+                pixels_to_distance["vertical"])
 
             ###
             # Image analysis
