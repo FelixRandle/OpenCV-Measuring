@@ -7,7 +7,8 @@ import numpy as np
 
 from .cv2_common import get_param_value
 
-def scale_image(image, scale=0.4):
+
+def scale_image(image, scale=0.6):
     """
     Scale a given image by the given factor across both axes
     :param image:
