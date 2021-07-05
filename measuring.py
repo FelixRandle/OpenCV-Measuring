@@ -5,37 +5,57 @@ import numpy as np
 
 import sys
 
-from utils.common import DEBUG, CAN_DISPLAY, log, angle_between
+from utils.common import DEBUG, CAN_DISPLAY, log, angle_between, distance
 from utils.cv2_common import get_camera, register_params, place_text,\
     get_param_value
 from utils.image import scale_image, get_transformed_point, \
     four_point_transform, get_contours
 
-# IntelliJ complains about this not existing but it works
+from camera_calibration import load_coefficients
+
 from distances import HORIZONTAL, VERTICAL, MARKER_SIZE
 
-camera = get_camera(1 if CAN_DISPLAY else 0)
-if camera is None:
+camera = get_camera(2 if CAN_DISPLAY else 0)
+if camera is False:
     print("Cannot initialise camera, exiting...", file=sys.stderr)
+    sys.exit()
 
 # Register params with format
 # "NAME": [DEFAULT, MAX, FLOAT?]
 if CAN_DISPLAY:
     register_params({
-        "gaussian__ksize": [3, 20],
-        "gaussian__sigmax": [150, 200],
-        "canny__threshold1": [130, 255],
-        "canny__threshold2": [40, 255],
-        "erosion__kernel_size": [1, 20],
-        "dilation__kernel_size": [3, 20],
-        "border__epsilon": [2, 100]
+        "gaussian__ksize": [7, 20],
+        "gaussian__sigmax": [200, 200],
+        "canny__threshold1": [67, 255],
+        "canny__threshold2": [12, 255],
+        "canny__aperture": [1, 3],
+        "erosion__kernel_size": [2, 20],
+        "dilation__kernel_size": [2, 20],
+        "border__epsilon": [200, 300],
+        "adthresh__block_size": [7, 15],
+        "adthresh__C": [2, 10]
     })
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
 aruco_params = aruco.DetectorParameters_create()
 
+mtx, dist = load_coefficients('calibration.yml')
+
+optimal_matrix, roi = cv2.getOptimalNewCameraMatrix(mtx, dist,
+                                                    (2560, 1440),
+                                                    1,
+                                                    (2560, 1440))
+
+mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, optimal_matrix,
+                                         (2560, 1440), 5)
+
 while True:
     return_value, img = camera.read()
+
+    undistorted = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
+    # crop the image
+    x, y, w, h = roi
+    img = undistorted[y:y+h, x:x+w]
 
     corner_positions = {
         0: None,
@@ -147,9 +167,13 @@ while True:
             contours, (grey, blurred,
                        edged, eroded, dilated) = get_contours(img)
 
-            epsilon_multiplier = get_param_value("border__epsilon", 2) / 100
+            epsilon_multiplier = get_param_value("border__epsilon", 2) / 10000
             for cnt in contours:
                 perimeter = cv2.arcLength(cnt, True)
+                area = cv2.contourArea(cnt)
+
+                if perimeter < MARKER_SIZE * 4 or area < MARKER_SIZE ** 2:
+                    continue
 
                 epsilon = epsilon_multiplier * perimeter
                 approx = cv2.approxPolyDP(cnt, epsilon, True)
@@ -178,7 +202,6 @@ while True:
                         scale=0.5)
 
             if CAN_DISPLAY:
-                print(f"display: {CAN_DISPLAY}")
                 if DEBUG:
                     row1 = np.hstack((
                         scale_image(img),
@@ -199,7 +222,7 @@ while True:
                     cv2.imshow("DEBUG", np.vstack((row1, row2)))
 
                 else:
-                    cv2.imshow("Image", img)
+                    cv2.imshow("Image", scale_image(img, 1.8))
 
     if cv2.waitKey(1) == 27:
         break  # esc to quit

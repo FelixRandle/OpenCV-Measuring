@@ -26,27 +26,34 @@ def get_contours(image):
     """
 
     # Convert image to gray
-    ksize = 5
+    ksize = (get_param_value("gaussian__ksize", 3) * 2) - 1
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(
         gray, (ksize, ksize),
         get_param_value("gaussian__sigmax", 1) / 100)
 
+    threshold = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                cv2.THRESH_BINARY, (get_param_value("adthresh__block_size", 11) * 2) + 1,
+                                      get_param_value("adthresh__C", 2))
+
     edged = cv2.Canny(blurred,
                       get_param_value("canny__threshold1", 222),
-                      get_param_value("canny__threshold2", 130))
+                      get_param_value("canny__threshold2", 130),
+                      apertureSize=(get_param_value("canny__aperture", 3) * 2) + 1, L2gradient=True)
+
+
+    ksize = get_param_value("dilation__kernel_size", 3)
+    kernel = np.ones((ksize, ksize), np.uint8)
+    dilated = cv2.dilate(edged, kernel, iterations=1)
 
     ksize = get_param_value("erosion__kernel_size", 1)
     kernel = np.ones((ksize, ksize), np.uint8)
-    eroded = cv2.erode(edged, kernel, iterations=1)
-    ksize = get_param_value("dilation__kernel_size", 3)
-    kernel = np.ones((ksize, ksize), np.uint8)
-    dilated = cv2.dilate(eroded, kernel, iterations=1)
+    eroded = cv2.erode(dilated, kernel, iterations=1)
 
-    (_, cnts, _) = cv2.findContours(dilated, cv2.RETR_EXTERNAL,
+    (_, cnts, _) = cv2.findContours(eroded, cv2.RETR_EXTERNAL,
                                     cv2.CHAIN_APPROX_SIMPLE)
 
-    return cnts, (gray, blurred, edged, eroded, dilated)
+    return cnts, (gray, threshold, edged, eroded, dilated)
 
 
 def order_points(pts):

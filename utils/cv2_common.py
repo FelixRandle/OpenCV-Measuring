@@ -5,7 +5,7 @@ Utility functions for assorted cv2 actions
 import cv2
 
 
-def place_text(image, position, text, scale=2.0, color=(255, 255, 255)):
+def place_text(image, position, text, scale=2.0, color=(255, 255, 2)):
     cv2.putText(image, text, org=position,
                 fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=scale,
                 color=color, thickness=2,
@@ -30,9 +30,9 @@ def get_param_value(key, default):
 
 def get_camera(camera_id):
     camera = cv2.VideoCapture(camera_id, cv2.CAP_DSHOW)
-    camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    camera.set(cv2.CAP_PROP_FPS, 60)
+    camera.set(cv2.CAP_PROP_FRAME_WIDTH, 2560)
+    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1440)
+    camera.set(cv2.CAP_PROP_FPS, 30)
     if camera is None or not camera.isOpened():
         return False
     else:
