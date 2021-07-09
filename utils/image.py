@@ -22,7 +22,7 @@ def get_contours(image):
     """
     Gets contours for the given image
     :param image:
-    :return: cnts (array), steps (array of images)
+    :return: cnts (array), steps (array of calibration.images)
     """
 
     # Convert image to gray

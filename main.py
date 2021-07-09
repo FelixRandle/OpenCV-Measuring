@@ -5,17 +5,16 @@ import numpy as np
 
 import sys
 
-from utils.common import DEBUG, CAN_DISPLAY, log, angle_between, distance
-from utils.cv2_common import get_camera, register_params, place_text,\
+from utils.common import DEBUG, CAN_DISPLAY, log, load_coefficients
+from utils.cv2_common import get_camera, register_params, place_text, \
     get_param_value
 from utils.image import scale_image, get_transformed_point, \
     four_point_transform, get_contours
 
-from camera_calibration import load_coefficients
+from utils.config import HORIZONTAL, VERTICAL, MARKER_SIZE, \
+    CAMERA_WIDTH, CAMERA_HEIGHT
 
-from distances import HORIZONTAL, VERTICAL, MARKER_SIZE
-
-camera = get_camera(2 if CAN_DISPLAY else 0)
+camera = get_camera()
 if camera is False:
     print("Cannot initialise camera, exiting...", file=sys.stderr)
     sys.exit()
@@ -39,23 +38,21 @@ if CAN_DISPLAY:
 aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
 aruco_params = aruco.DetectorParameters_create()
 
-mtx, dist = load_coefficients('calibration.yml')
+mtx, dist = load_coefficients('utils/calibration/calibration.yml')
+print(mtx, dist)
 
-optimal_matrix, roi = cv2.getOptimalNewCameraMatrix(mtx, dist,
-                                                    (2560, 1440),
-                                                    1,
-                                                    (2560, 1440))
+optimal_matrix, roi = cv2.getOptimalNewCameraMatrix(
+    mtx, dist,
+    (CAMERA_WIDTH, CAMERA_HEIGHT),
+    1,
+    (CAMERA_WIDTH, CAMERA_HEIGHT))
 
-mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, optimal_matrix,
-                                         (2560, 1440), 5)
+mapx, mapy = cv2.initUndistortRectifyMap(
+    mtx, dist, None, optimal_matrix,
+    (CAMERA_WIDTH, CAMERA_HEIGHT), 5)
 
 while True:
     return_value, img = camera.read()
-
-    undistorted = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
-    # crop the image
-    x, y, w, h = roi
-    img = undistorted[y:y+h, x:x+w]
 
     corner_positions = {
         0: None,
@@ -65,17 +62,21 @@ while True:
     }
 
     if img is not None:
+        undistorted = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
+        # crop the image
+        x, y, w, h = roistorted[y:y + h, x:x + w]
+
         (corners, ids, rejected) = aruco.detectMarkers(
             img, aruco_dict, parameters=aruco_params)
 
         if len(corners) < 4:
             log("Cannot see enough markers to do anything useful.")
             if CAN_DISPLAY:
-                cv2.imshow("Image", img)
+                cv2.imshow("Image", scale_image(img, 0.4))
         elif len(corners) > 4:
             log("Too many markers in frame")
             if CAN_DISPLAY:
-                cv2.imshow("Image", img)
+                cv2.imshow("Image", scale_image(img, 0.4))
         else:
             for i in range(0, len(corners)):
                 detected_marker = corners[i]
@@ -168,12 +169,21 @@ while True:
                        edged, eroded, dilated) = get_contours(img)
 
             epsilon_multiplier = get_param_value("border__epsilon", 2) / 10000
+
+            print(f"marker: {(MARKER_SIZE * average_horizontal_ratio) * 2} | {(MARKER_SIZE * average_horizontal_ratio) ** 2}")
+
             for cnt in contours:
                 perimeter = cv2.arcLength(cnt, True)
                 area = cv2.contourArea(cnt)
 
-                if perimeter < MARKER_SIZE * 4 or area < MARKER_SIZE ** 2:
+                print(f"PER: {perimeter} | AREA: {area}")
+
+                # If the perimeter is less than twice the side of a marker or area is less than the marker then ignore it.
+                if perimeter < (MARKER_SIZE * average_horizontal_ratio) * 2 \
+                        or area < (MARKER_SIZE * average_horizontal_ratio) ** 2:
                     continue
+
+                print("yes")
 
                 epsilon = epsilon_multiplier * perimeter
                 approx = cv2.approxPolyDP(cnt, epsilon, True)
@@ -222,7 +232,7 @@ while True:
                     cv2.imshow("DEBUG", np.vstack((row1, row2)))
 
                 else:
-                    cv2.imshow("Image", scale_image(img, 1.8))
+                    cv2.imshow("Image", scale_image(img, 1))
 
     if cv2.waitKey(1) == 27:
         break  # esc to quit

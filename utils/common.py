@@ -4,6 +4,7 @@ Utility functions to clean up main file.
 import argparse
 import sys
 import numpy as np
+import cv2
 
 # Set debug if intelliJ debugger attached
 DEBUG = False
@@ -41,3 +42,21 @@ def angle_between(pt1, pt2):
 def log(text):
     if not CAN_DISPLAY and DEBUG:
         print(text)
+
+
+def load_coefficients(path: str) -> [np.ndarray, np.ndarray]:
+    """
+    Load coefficients from camera calibration
+
+    :param path: File to load coefficients from.
+    :return: Camera Matrix and Dist Matrix
+    """
+    # FILE_STORAGE_READ
+    coefficient_file = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
+
+    camera_matrix = coefficient_file.getNode("K").mat()
+    dist_matrix = coefficient_file.getNode("D").mat()
+
+    coefficient_file.release()
+    return [camera_matrix, dist_matrix]
+
